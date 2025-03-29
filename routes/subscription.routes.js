@@ -2,14 +2,15 @@ import { Router } from "express";
 import authorize from "../middlewares/auth.middleware.js";
 import {
   createSubscription,
+  getAllSubscriptions,
   getUserSubscriptions,
 } from "../controllers/subscription.controller.js";
+import { authorizeAdmin } from "../middlewares/admin.middleware.js";
 
 const subscriptionRouter = Router();
 
-subscriptionRouter.get("/", (req, res) =>
-  res.send({ title: "GET all subscriptions" })
-);
+// Admin-only route to get all subscriptions
+subscriptionRouter.get("/", authorize, authorizeAdmin, getAllSubscriptions);
 
 subscriptionRouter.get("/:id", (req, res) =>
   res.send({ title: "GET subscription by id" })
