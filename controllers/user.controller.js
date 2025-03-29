@@ -1,9 +1,15 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 
+//  Get all users (Admin only)
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find();
+    // Ensure only admins can fetch all users
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    const users = await User.find().select("-password"); // Exclude passwords from response
 
     res.status(200).json({ success: true, data: users });
   } catch (error) {
@@ -11,14 +17,20 @@ export const getUsers = async (req, res, next) => {
   }
 };
 
+//  Get a specific user by ID (Admin or the user themselves)
 export const getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select("-password"); // Exclude password
 
     if (!user) {
-      const error = new Error("User not found");
-      error.statusCode = 404;
-      throw error;
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Ensure the user is either requesting their own profile or an admin
+    if (req.user.id !== req.params.id && !req.user.isAdmin) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
     res.status(200).json({ success: true, data: user });
@@ -27,6 +39,7 @@ export const getUser = async (req, res, next) => {
   }
 };
 
+//  Update user details (User can update their own details, and admin can update any user)
 export const updateUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -43,7 +56,7 @@ export const updateUser = async (req, res, next) => {
         .json({ success: false, message: "User not found" });
     }
 
-    // Update fields if provided
+    // Update only provided fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) {
@@ -63,6 +76,7 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+//  Delete a user (Users can delete their own account, and admins can delete any user)
 export const deleteUser = async (req, res, next) => {
   try {
     // Ensure the user can only delete their own account unless they are an admin

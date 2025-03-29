@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
 
-// Utility function to generate JWT token
+// function to generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
     { userId: user._id, isAdmin: user.isAdmin }, // Include isAdmin in token
@@ -15,14 +15,16 @@ const generateToken = (user) => {
   );
 };
 
+// User registration (sign-up) controller
 export const signUp = async (req, res, next) => {
+  // Start a database session for transactions
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const { name, email, password } = req.body;
 
-    // Check if a user already exists
+    // Check if a user already exists with the provided email
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -31,19 +33,20 @@ export const signUp = async (req, res, next) => {
       throw error;
     }
 
-    // Hash password
+    // Hash the password before saving it
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // Create new user in the database with transaction support
     const newUsers = await User.create(
       [{ name, email, password: hashedPassword }],
       { session }
     );
 
-    // Generate token
+    // Generate authentication token for the new user
     const token = generateToken(newUsers[0]);
 
+    // Commit transaction and end session
     await session.commitTransaction();
     session.endSession();
 
@@ -56,18 +59,19 @@ export const signUp = async (req, res, next) => {
       },
     });
   } catch (error) {
+    // Abort transaction and end session in case of an error
     await session.abortTransaction();
     session.endSession();
     next(error);
   }
 };
 
-// Sign in controller
+// User login (sign-in) controller
 export const signIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
+    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       const error = new Error("User not found");
@@ -75,8 +79,7 @@ export const signIn = async (req, res, next) => {
       throw error;
     }
 
-    // Check if password is correct
-    // Use bcrypt.compare to check the password against the hashed password
+    // Compare the provided password with the hashed password in the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       const error = new Error("Invalid password");
@@ -84,7 +87,7 @@ export const signIn = async (req, res, next) => {
       throw error;
     }
 
-    // Generate token
+    // Generate authentication token
     const token = generateToken(user);
 
     res.status(200).json({
@@ -100,4 +103,5 @@ export const signIn = async (req, res, next) => {
   }
 };
 
+// User sign-out controller
 export const signOut = async (req, res, next) => {};

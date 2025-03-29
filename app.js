@@ -13,26 +13,32 @@ import workflowRouter from "./routes/workflow.routes.js";
 
 const app = express();
 
+// / Middleware to parse JSON requests
 app.use(express.json());
+
+// Middleware to parse URL-encoded requests
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware to parse cookies from incoming requests
 app.use(cookieParser());
+
+// Custom middleware for autorization and bot detection
 app.use(arcjetMiddleware);
 
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/subscriptions", subscriptionRouter);
-app.use("/api/v1/workflows", workflowRouter);
+// Route handlers for different functionalities
+app.use("/api/v1/auth", authRouter); // Authentication routes
+app.use("/api/v1/users", userRouter); // User management routes
+app.use("/api/v1/subscriptions", subscriptionRouter); // Subscription management routes
+app.use("/api/v1/workflows", workflowRouter); // Workflow routes
 
+// Middleware to handle errors globally
 app.use(errorMiddleware);
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
+// Start the server and connect to the database
 app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
 
-  await connectToDatabase();
+  await connectToDatabase(); // Connect to MongoDB when the server starts
 });
 
 export default app;

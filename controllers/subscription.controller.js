@@ -2,6 +2,7 @@ import Subscription from "../models/subscription.model.js";
 import { workflowClient } from "../config/upstash.js";
 import { SERVER_URL } from "../config/env.js";
 
+//  Get all subscriptions (Admin only)
 export const getAllSubscriptions = async (req, res, next) => {
   try {
     // Ensure only admins can access this
@@ -12,6 +13,7 @@ export const getAllSubscriptions = async (req, res, next) => {
       });
     }
 
+    // Fetch all subscriptions and populate user details (name and email)
     const subscriptions = await Subscription.find().populate(
       "user",
       "name email"
@@ -26,42 +28,39 @@ export const getAllSubscriptions = async (req, res, next) => {
   }
 };
 
+//  Create a new subscription for the logged-in user
 export const createSubscription = async (req, res, next) => {
   try {
+    // Create a new subscription with the user's ID
     const subscription = await Subscription.create({
       ...req.body,
       user: req.user._id,
     });
 
+    // Trigger a workflow for subscription reminders
     const { workflowRunId } = await workflowClient.trigger({
       url: `${SERVER_URL}/api/v1/workflows/subscription/reminder`,
-      body: {
-        subscriptionId: subscription.id,
-      },
-      headers: {
-        "content-type": "application/json",
-      },
+      body: { subscriptionId: subscription.id },
+      headers: { "content-type": "application/json" },
       retries: 0,
     });
 
     res.status(201).json({
       success: true,
-      data: {
-        subscription,
-        workflowRunId,
-      },
+      data: { subscription, workflowRunId },
     });
   } catch (e) {
     next(e);
   }
 };
 
+//  Update a subscription (Only the owner or an admin can update)
 export const updateSubscription = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Find the subscription
+    // Find the subscription by ID
     const subscription = await Subscription.findById(id);
 
     if (!subscription) {
@@ -70,7 +69,7 @@ export const updateSubscription = async (req, res, next) => {
         .json({ success: false, message: "Subscription not found" });
     }
 
-    // Check if the user is the owner OR an admin
+    // Ensure the user is either the owner of the subscription or an admin
     if (
       req.user._id.toString() !== subscription.user.toString() &&
       !req.user.isAdmin
@@ -78,7 +77,7 @@ export const updateSubscription = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    // Update only allowed fields
+    // Define allowed fields for update
     const allowedUpdates = [
       "name",
       "price",
@@ -89,6 +88,8 @@ export const updateSubscription = async (req, res, next) => {
       "status",
       "renewalDate",
     ];
+
+    // Update only allowed fields
     Object.keys(updates).forEach((key) => {
       if (allowedUpdates.includes(key)) {
         subscription[key] = updates[key];
@@ -103,11 +104,12 @@ export const updateSubscription = async (req, res, next) => {
   }
 };
 
+//  Delete a subscription (Only the owner or an admin can delete)
 export const deleteSubscription = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Find the subscription
+    // Find the subscription by ID
     const subscription = await Subscription.findById(id);
 
     if (!subscription) {
@@ -116,7 +118,7 @@ export const deleteSubscription = async (req, res, next) => {
         .json({ success: false, message: "Subscription not found" });
     }
 
-    // Check if the user is the owner OR an admin
+    // Ensure the user is either the owner or an admin
     if (
       req.user._id.toString() !== subscription.user.toString() &&
       !req.user.isAdmin
@@ -135,11 +137,12 @@ export const deleteSubscription = async (req, res, next) => {
   }
 };
 
+//  Cancel a subscription (Only the owner or an admin can cancel)
 export const cancelSubscription = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Find the subscription
+    // Find the subscription by ID
     const subscription = await Subscription.findById(id);
 
     if (!subscription) {
@@ -148,7 +151,7 @@ export const cancelSubscription = async (req, res, next) => {
         .json({ success: false, message: "Subscription not found" });
     }
 
-    // Check if the user is the owner OR an admin
+    // Ensure the user is either the owner or an admin
     if (
       req.user._id.toString() !== subscription.user.toString() &&
       !req.user.isAdmin
@@ -170,15 +173,17 @@ export const cancelSubscription = async (req, res, next) => {
   }
 };
 
+//  Get subscriptions of a specific user (Only the user can fetch their subscriptions)
 export const getUserSubscriptions = async (req, res, next) => {
   try {
-    // Check if the user is the same as the one in the token
+    // Ensure the logged-in user is the same as the requested user
     if (req.user.id !== req.params.id) {
       const error = new Error("You are not the owner of this account");
       error.status = 401;
       throw error;
     }
 
+    // Fetch subscriptions for the user
     const subscriptions = await Subscription.find({ user: req.params.id });
 
     res.status(200).json({ success: true, data: subscriptions });
@@ -187,10 +192,12 @@ export const getUserSubscriptions = async (req, res, next) => {
   }
 };
 
+//  Get a subscription by ID (Only the owner or an admin can access)
 export const getSubscriptionById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    // Fetch the subscription and populate user details
     const subscription = await Subscription.findById(id).populate(
       "user",
       "name email"
@@ -203,7 +210,7 @@ export const getSubscriptionById = async (req, res, next) => {
       });
     }
 
-    // Check if the user is the owner OR an admin
+    // Ensure the user is either the owner or an admin
     if (
       req.user._id.toString() !== subscription.user._id.toString() &&
       !req.user.isAdmin
@@ -223,21 +230,22 @@ export const getSubscriptionById = async (req, res, next) => {
   }
 };
 
+// Get upcoming subscription renewals (Admins see all, users see their own)
 export const getUpcomingRenewals = async (req, res, next) => {
   try {
     const { isAdmin, _id: userId } = req.user;
 
-    // Set the filter: if admin, fetch all; otherwise, fetch only user's subscriptions
+    // If admin, fetch all renewals; otherwise, fetch only the user's renewals
     const filter = isAdmin ? {} : { user: userId };
 
-    // Get upcoming renewals (only active subscriptions with future renewal dates)
+    // Fetch active subscriptions with future renewal dates, sorted by nearest renewal first
     const upcomingSubscriptions = await Subscription.find({
       ...filter,
       status: "active",
-      renewalDate: { $gte: new Date() }, // Renewal date must be in the future
+      renewalDate: { $gte: new Date() },
     })
       .populate("user", "name email")
-      .sort({ renewalDate: 1 }); // Sort by nearest renewal first
+      .sort({ renewalDate: 1 });
 
     res.status(200).json({
       success: true,
