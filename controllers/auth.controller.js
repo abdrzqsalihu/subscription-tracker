@@ -6,6 +6,15 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
 
+// Utility function to generate JWT token
+const generateToken = (user) => {
+  return jwt.sign(
+    { userId: user._id, isAdmin: user.isAdmin }, // Include isAdmin in token
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+};
+
 export const signUp = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -26,14 +35,14 @@ export const signUp = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Create new user
     const newUsers = await User.create(
       [{ name, email, password: hashedPassword }],
       { session }
     );
 
-    const token = jwt.sign({ userId: newUsers[0]._id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    // Generate token
+    const token = generateToken(newUsers[0]);
 
     await session.commitTransaction();
     session.endSession();
@@ -53,29 +62,30 @@ export const signUp = async (req, res, next) => {
   }
 };
 
+// Sign in controller
 export const signIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
+    // Check if user exists
     const user = await User.findOne({ email });
-
     if (!user) {
       const error = new Error("User not found");
       error.statusCode = 404;
       throw error;
     }
 
+    // Check if password is correct
+    // Use bcrypt.compare to check the password against the hashed password
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       const error = new Error("Invalid password");
       error.statusCode = 401;
       throw error;
     }
 
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    // Generate token
+    const token = generateToken(user);
 
     res.status(200).json({
       success: true,
