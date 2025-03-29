@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  deleteUser,
   getUser,
   getUsers,
   updateUser,
@@ -11,8 +12,6 @@ const userRouter = Router();
 userRouter.get("/", getUsers);
 userRouter.get("/:id", authorize, getUser);
 userRouter.put("/:id", authorize, updateUser);
-userRouter.delete("/:id", (req, res) =>
-  res.send({ title: "Delete user by id" })
-);
+userRouter.delete("/:id", authorize, deleteUser);
 
 export default userRouter;

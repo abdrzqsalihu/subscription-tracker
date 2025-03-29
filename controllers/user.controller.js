@@ -53,13 +53,37 @@ export const updateUser = async (req, res, next) => {
 
     await user.save();
 
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    // Ensure the user can only delete their own account unless they are an admin
+    if (req.user.id !== req.params.id && !req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You can only delete your own account",
+      });
+    }
+
+    const user = await User.findByIdAndDelete(req.params.id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
     res
       .status(200)
-      .json({
-        success: true,
-        message: "User updated successfully",
-        data: user,
-      });
+      .json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     next(error);
   }
