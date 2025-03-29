@@ -72,3 +72,39 @@ export const getUserSubscriptions = async (req, res, next) => {
     next(e);
   }
 };
+
+export const getSubscriptionById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const subscription = await Subscription.findById(id).populate(
+      "user",
+      "name email"
+    );
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found",
+      });
+    }
+
+    // Check if the user is the owner OR an admin
+    if (
+      req.user._id.toString() !== subscription.user._id.toString() &&
+      !req.user.isAdmin
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. You can only view your own subscriptions.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: subscription,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
