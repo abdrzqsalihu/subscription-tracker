@@ -160,13 +160,11 @@ export const cancelSubscription = async (req, res, next) => {
     subscription.status = "canceled";
     await subscription.save();
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Subscription canceled successfully",
-        data: subscription,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Subscription canceled successfully",
+      data: subscription,
+    });
   } catch (error) {
     next(error);
   }
@@ -219,6 +217,31 @@ export const getSubscriptionById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: subscription,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUpcomingRenewals = async (req, res, next) => {
+  try {
+    const { isAdmin, _id: userId } = req.user;
+
+    // Set the filter: if admin, fetch all; otherwise, fetch only user's subscriptions
+    const filter = isAdmin ? {} : { user: userId };
+
+    // Get upcoming renewals (only active subscriptions with future renewal dates)
+    const upcomingSubscriptions = await Subscription.find({
+      ...filter,
+      status: "active",
+      renewalDate: { $gte: new Date() }, // Renewal date must be in the future
+    })
+      .populate("user", "name email")
+      .sort({ renewalDate: 1 }); // Sort by nearest renewal first
+
+    res.status(200).json({
+      success: true,
+      data: upcomingSubscriptions,
     });
   } catch (error) {
     next(error);
