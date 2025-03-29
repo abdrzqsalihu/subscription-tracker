@@ -5,6 +5,7 @@ import {
   getAllSubscriptions,
   getSubscriptionById,
   getUserSubscriptions,
+  updateSubscription,
 } from "../controllers/subscription.controller.js";
 import { authorizeAdmin } from "../middlewares/admin.middleware.js";
 
@@ -15,9 +16,7 @@ subscriptionRouter.get("/", authorize, authorizeAdmin, getAllSubscriptions);
 
 subscriptionRouter.post("/", authorize, createSubscription);
 
-subscriptionRouter.put("/:id", (req, res) =>
-  res.send({ title: "Update subscription by id" })
-);
+subscriptionRouter.put("/:id", authorize, updateSubscription);
 
 subscriptionRouter.delete("/:id", (req, res) =>
   res.send({ title: "Delete subscription by id" })

@@ -56,6 +56,53 @@ export const createSubscription = async (req, res, next) => {
   }
 };
 
+export const updateSubscription = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Find the subscription
+    const subscription = await Subscription.findById(id);
+
+    if (!subscription) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription not found" });
+    }
+
+    // Check if the user is the owner OR an admin
+    if (
+      req.user._id.toString() !== subscription.user.toString() &&
+      !req.user.isAdmin
+    ) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    // Update only allowed fields
+    const allowedUpdates = [
+      "name",
+      "price",
+      "currency",
+      "frequency",
+      "category",
+      "paymentMethod",
+      "status",
+      "renewalDate",
+    ];
+    Object.keys(updates).forEach((key) => {
+      if (allowedUpdates.includes(key)) {
+        subscription[key] = updates[key];
+      }
+    });
+
+    await subscription.save();
+
+    res.status(200).json({ success: true, data: subscription });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getUserSubscriptions = async (req, res, next) => {
   try {
     // Check if the user is the same as the one in the token
