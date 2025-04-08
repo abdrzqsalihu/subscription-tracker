@@ -1,6 +1,6 @@
 # 📦 Subscription Management API
 
-This is a RESTful API for managing user subscriptions, including features like user authentication, subscription CRUD operations, and automated email reminders for upcoming renewals using Upstash Workflows
+This is a RESTful API for managing user subscriptions, including features like user authentication, subscription CRUD operations, bot protection with Arcjet, and automated email reminders for upcoming renewals using Upstash Workflows
 
 ## 🚀 Features
 
@@ -10,6 +10,7 @@ This is a RESTful API for managing user subscriptions, including features like u
 - Auto email reminders before renewal (7, 5, 2, and 1 day)
 - MongoDB with Mongoose
 - Upstash Workflow integration
+- Arcjet bot protection
 
 ## 🛠️ Tech Stack
 
@@ -31,13 +32,22 @@ npm install
 Create a .env file in the root directory with this content:
 
 ```env
+NODE_ENV='development'
 PORT=5000
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/db
+DB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/db
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=7d
 EMAIL_FROM=your_email@gmail.com
-EMAIL_PASS=your_email_password
+EMAIL_PASSWORD=your_email_password
 SERVER_URL=http://localhost:5000
+
+# Arcjet Bot Protection
+ARCJET_ENV=development
+ARCJET_KEY=your_arcjet_api_key
+
+# Upstash QStash
+QSTASH_URL=http://127.0.0.1:8080
+QSTASH_TOKEN=your_qstash_token
 ```
 
 To start the development server:
@@ -74,18 +84,24 @@ Subscriptions:
 
 Reminders are automatically scheduled via Upstash Workflows to email the user 7, 5, 2, and 1 day before their subscription renewal date.
 
+## 🛡️ Arcjet Protection
+
+Arcjet is integrated for bot protection and abuse prevention on critical routes.
+
 ## 📁 Folder Structure
 
 ```
 .
 ├── config/             # Environment config, DB connection
 ├── controllers/        # All route logic
+├── database/           # Database configuration and connection
+├── middleware/         # Middlewares
 ├── models/             # Mongoose schemas
 ├── routes/             # API routes
 ├── utils/              # Helper functions
 ├── workflows/          # Upstash reminder logic
-├── server.js           # Entry point
-├── .env                # Environment variables (not committed)
+├── app.js              # Entry point
+├── .env                # Environment variables (add manually)
 ```
 
 ## 📄 License
