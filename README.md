@@ -106,4 +106,4 @@ Arcjet is integrated for bot protection and abuse prevention on critical routes.
 
 ## 📄 License
 
-MIT License © 2025 [Abdulrazaq Salihu]
+This project is licensed under the [MIT License](LICENSE).  
