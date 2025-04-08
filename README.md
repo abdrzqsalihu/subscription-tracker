@@ -18,6 +18,7 @@ This is a RESTful API for managing user subscriptions, including features like u
 - **MongoDB** + **Mongoose**
 - **JWT** for authentication
 - **Upstash Workflows** for reminders
+- **Arcjet** for bot protections
 
 ## 🔧 Setup & Configuration
 
